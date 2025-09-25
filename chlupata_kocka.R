@@ -1,5 +1,7 @@
-# app.R
 library(shiny)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
 
 # --- MENU (statické) ---
 menu_df <- data.frame(
@@ -12,7 +14,7 @@ menu_choices <- setNames(menu_df$cena, paste0(menu_df$item, " (", menu_df$cena, 
 
 # --- HOSTS (výchozí seznam, dynamické) ---
 hosts_init <- data.frame(
-  host = c("Pepa", "Anna", "Karel"),
+  host = c("Bavíš", "Fijala", "Okamúra", "Rakušák", "Konečníková", "Hříbek", "Otoman", "Šlacha"),
   stringsAsFactors = FALSE
 )
 
@@ -49,7 +51,9 @@ ui <- fluidPage(
         tabPanel("Historie objednávek",
                  tableOutput("history")),
         tabPanel("Summary",
-                 tableOutput("summary_totals"))
+                 tableOutput("summary_totals")),
+        tabPanel("Graf",
+                 plotOutput("ucty_plot", height = "700px"))
       )
     )
   )
@@ -69,6 +73,56 @@ server <- function(input, output, session) {
       Total = numeric(),
       stringsAsFactors = FALSE
     )
+  })
+  
+  # Kumulativní graf útraty jednotlivých hostů v čase
+  output$ucty_plot <- renderPlot({
+    od <- orders()
+    if (nrow(od) == 0) return(NULL)
+    
+    # všichni hosté (včetně těch bez objednávek)
+    all_hosts <- hosts_df()$host
+    
+    # časové uzly = všechny momenty objednávek
+    time_points <- sort(unique(od$Time))
+    
+    # kumulativní suma na úrovni (Host, Time) pro skutečné objednávky
+    base <- od %>%
+      arrange(Time) %>%
+      group_by(Host) %>%
+      mutate(CumTotal = cumsum(Total)) %>%
+      ungroup() %>%
+      select(Time, Host, CumTotal)
+    
+    # kompletní mřížka: každý host × každý časový bod
+    grid <- expand.grid(Time = time_points, Host = all_hosts, KEEP.OUT.ATTRS = FALSE) %>%
+      as_tibble() %>%
+      left_join(base, by = c("Time", "Host")) %>%
+      group_by(Host) %>%
+      arrange(Time, .by_group = TRUE) %>%
+      tidyr::fill(CumTotal, .direction = "down") %>%   # carry-forward
+      mutate(CumTotal = ifelse(is.na(CumTotal), 0, CumTotal)) %>%
+      ungroup()
+    
+    # Pokud je jen 1 časový bod, ukážeme body; jinak čáry + body
+    if (length(time_points) == 1) {
+      ggplot(grid, aes(x = Time, y = CumTotal, color = Host, group = Host)) +
+        geom_point(size = 2) +
+        labs(x = "Čas", y = "Kumulativní útrata (Kč)", color = "Host") +
+        theme_minimal(base_size = 12) +
+        theme(legend.position = "bottom")
+    } else {
+      ggplot(grid, aes(x = Time, y = CumTotal, color = Host, group = Host)) +
+        geom_line(linewidth = 1) +                 # lineární průběh
+        geom_point(size = 1.6) +                   # volitelně body v uzlech
+        labs(x = "Čas", y = "Kumulativní útrata (Kč)", color = "Host") +
+        scale_x_datetime(date_labels = "%H:%M\n%d.%m.") +
+        theme_minimal(base_size = 12) +
+        theme(
+          legend.position = "bottom",
+          panel.grid.minor = element_blank()
+        )
+    }
   })
   
   # --- Stav: seznam hostů jako samostatná df ---
