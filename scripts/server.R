@@ -127,6 +127,7 @@ server <- function(input, output, session) {
   })
   
   # --- Perzistence: ukládej na disk po změně ---
+  if (!dir.exists("temp")) dir.create("temp")
   observeEvent(orders(),  ignoreInit = TRUE, { saveRDS(orders(), "temp/orders.rds") })
   observeEvent(hosts_df(), ignoreInit = TRUE, { saveRDS(hosts_df(), "temp/hosts.rds")  })
   
