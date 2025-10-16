@@ -9,7 +9,7 @@ server <- function(input, output, session) {
       Time  = as.POSIXct(character()),
       Host  = character(),
       Item  = character(),
-      Qty   = integer(),
+      Qty   = numeric(),
       Price = numeric(),
       Total = numeric(),
       stringsAsFactors = FALSE
@@ -102,12 +102,12 @@ server <- function(input, output, session) {
   # --- Přidání objednávky ---
   observeEvent(input$add, {
     req(input$host, input$item, input$qty)
-    qty <- as.integer(input$qty)
-    if (is.na(qty) || qty < 1) return(NULL)
+    qty <- as.numeric(input$qty)
+    if (is.na(qty) || qty < 0.1) return(NULL)
     
-    price <- as.numeric(input$item)
-    item_name <- menu_df$item[match(price, menu_df$cena)]
-    if (is.na(item_name)) item_name <- "Neznámá položka"
+    item_name <- input$item
+    price <- menu_df$cena[match(item_name, menu_df$item)]
+    if (is.na(price)) price <- 0
     
     # jistota, že host je v hosts_df (kdyby přišel odjinud)
     if (!(input$host %in% hosts_df()$host)) {
@@ -120,10 +120,13 @@ server <- function(input, output, session) {
       Item  = item_name,
       Qty   = qty,
       Price = price,
-      Total = qty * price,
+      Total = round(qty * price, 2),
       stringsAsFactors = FALSE
     )
     orders(rbind(orders(), new_row))
+
+    # reset množství po přidání
+    updateNumericInput(session, "qty", value = 1)
   })
   
   # --- Perzistence: ukládej na disk po změně ---
@@ -165,13 +168,13 @@ server <- function(input, output, session) {
       }
       agg[order(agg$Host), ]
     }
-  }, digits = 0)
+  }, digits = 2)
   
   output$history <- renderTable({
     od <- orders()
     if (nrow(od) == 0) return(od)
     od[order(od$Time), ]
-  }, digits = 0)
+  }, digits = 2)
   
   output$summary_totals <- renderTable({
     od <- orders()
@@ -179,7 +182,7 @@ server <- function(input, output, session) {
       Metrika = c("Počet objednávek", "Počet hostů", "Celkem Kč"),
       Hodnota = c(nrow(od), length(hosts_df()$host), if (nrow(od)) sum(od$Total) else 0)
     )
-  }, digits = 0)
+  }, digits = 2)
   
   # Export CSV (historie)
   output$export <- downloadHandler(
