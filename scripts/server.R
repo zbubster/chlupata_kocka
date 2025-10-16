@@ -135,22 +135,60 @@ server <- function(input, output, session) {
   observeEvent(hosts_df(), ignoreInit = TRUE, { saveRDS(hosts_df(), "temp/hosts.rds")  })
   
   # --- Storno poslední objednávky ---
-  observeEvent(input$undo, {
-    od <- orders()
-    if (nrow(od) > 0) orders(od[-nrow(od), , drop = FALSE])
+  
+  observeEvent(input$undo, ignoreInit = TRUE, {
+    shinyalert(
+      title = "Vrátit poslední akci?",
+      text  = "Změny provedené poslední akcí budou zrušeny.",
+      type  = "warning",
+      showCancelButton = TRUE,
+      confirmButtonText = "Ano, vrátit",
+      cancelButtonText  = "Ne, ponechat",
+      callbackR = function(ok){
+        if (isTRUE(ok)) {
+          isolate({
+            # deletion itself
+            observeEvent(input$undo, {
+              od <- orders()
+              if (nrow(od) > 0) orders(od[-nrow(od), , drop = FALSE])
+            })
+          })
+          showNotification("Poslední akce vrácena.", type = "message")
+        }
+      }
+    )
   })
   
   # --- Reset (vymaže jen objednávky; hosty nechá) ---
-  observeEvent(input$reset, {
-    orders(data.frame(
-      Time  = as.POSIXct(character()),
-      Host  = character(),
-      Item  = character(),
-      Qty   = integer(),
-      Price = numeric(),
-      Total = numeric(),
-      stringsAsFactors = FALSE
-    ))
+  
+  observeEvent(input$reset, ignoreInit = TRUE, {
+    shinyalert(
+      title = "Do you want to RESET whole app?",
+      text  = "Sets all tabs to 0. Irreversible!",
+      type  = "error",
+      showCancelButton = TRUE,
+      confirmButtonText = "YES, reset",
+      cancelButtonText  = "NO",
+      callbackR = function(ok){
+        if (isTRUE(ok)) {
+          isolate({
+            # RESET
+            observeEvent(input$reset, {
+              orders(data.frame(
+                Time  = as.POSIXct(character()),
+                Host  = character(),
+                Item  = character(),
+                Qty   = integer(),
+                Price = numeric(),
+                Total = numeric(),
+                stringsAsFactors = FALSE
+              ))
+            })
+          })
+          showNotification("Aplikace resetována.", type = "warning")
+        }
+      }
+    )
   })
   
   # --- Výstupy ---
@@ -184,9 +222,10 @@ server <- function(input, output, session) {
     )
   }, digits = 2)
   
-  # Export CSV (historie)
+  # Export CSV (historie účtů chronologicky)
   output$export <- downloadHandler(
     filename = function() paste0("historie_objednavek_", format(Sys.time(), "%Y-%m-%d_%H-%M-%S"), ".csv"),
     content  = function(file) write.csv(orders(), file, row.names = FALSE, fileEncoding = "UTF-8")
   )
+  
 }

@@ -15,7 +15,7 @@ menu <- c("Pivo", "Víno", "Limo", "Panák", "Čaj", "Káva")
 price <- c(35, 50, 25, 60, 25, 30)
 
 # RUN
-source("scripts/knihovnik.R"); knihovnik(shiny, ggplot2, dplyr, tidyr)
+source("scripts/knihovnik.R"); knihovnik(shiny, ggplot2, dplyr, tidyr, shinyalert)
 source("scripts/menu_guests.R")
 source("scripts/ui.R")
 source("scripts/server.R")
