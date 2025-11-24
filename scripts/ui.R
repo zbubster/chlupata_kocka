@@ -5,15 +5,15 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       tags$h3("Objednávka:"),
-      selectInput("host", "Vyber hosta:", choices = hosts_init$host),
+      selectInput("guest", "Vyber guesta:", choices = guests_init$guest),
       selectInput("item", "Položka:", choices = menu_choices),
       numericInput("qty", "Množství:", value = 1, min = 0.1, step = 1),
       actionButton("add", "Přidat na účet", class = "btn-primary"),
       tags$hr("#-#-#-#-#-#-#-#-#-#-#-#"),
       tags$h4("Přidat účet"),
       fluidRow(
-        column(8, textInput("new_host", "Jméno:", value = "")),
-        column(8, actionButton("add_host", "Přidat"))
+        column(8, textInput("new_guest", "Jméno:", value = "")),
+        column(8, actionButton("add_guest", "Přidat"))
       ),
       tags$h3("DANGER ZONE", style = "color: red; font-weight: bold"),
       tags$hr("#-#-#-#-#-#-#-#-#-#-#-#"),

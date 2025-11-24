@@ -10,7 +10,7 @@ menu_choices <- setNames(menu_df$item, paste0(menu_df$item, " (", menu_df$cena, 
 
 # --- GUESTS ---
 # this is a default df, updated guest list is stored in temp/hosts.rds
-hosts_init <- data.frame(
-  host = guests,
+guests_init <- data.frame(
+  guest = guests,
   stringsAsFactors = FALSE
 )
